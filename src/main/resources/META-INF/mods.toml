@@ -64,3 +64,10 @@ tanks go off in a chain reaction.
     versionRange="*"
     ordering="AFTER"
     side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="sable"
+    mandatory=false
+    versionRange="*"
+    ordering="AFTER"
+    side="BOTH"

@@ -3,6 +3,7 @@ package com.danzy.fuelblast;
 import com.danzy.fuelblast.compat.AeronauticsCompat;
 import com.danzy.fuelblast.compat.ContraptionCompat;
 import com.danzy.fuelblast.compat.ValkyrienCompat;
+import com.danzy.fuelblast.compat.SableCompat;
 import com.danzy.fuelblast.target.BlockFuelTarget;
 import com.danzy.fuelblast.target.FuelTarget;
 import net.minecraft.core.BlockPos;
@@ -55,7 +56,13 @@ public final class FuelScan {
             ContraptionCompat.collect(level, center, radius, add);
         }
 
-        // 3. tanks living inside an airship interior level
+        // 3. Sable physical sub-levels used by Aeronautics/Simulated.
+        // Their block entities are not in the parent LevelChunk map.
+        if (FuelBlastConfig.aeronauticsInteriors.get()) {
+            SableCompat.collect(level, center, radius, add);
+        }
+
+        // 4. tanks living inside an airship interior level
         if (FuelBlastConfig.aeronauticsInteriors.get()) {
             AeronauticsCompat.collect(level, center, radius, add);
         }

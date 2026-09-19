@@ -3,6 +3,7 @@ package com.danzy.fuelblast;
 import com.danzy.fuelblast.network.BlastEffectPacket;
 import com.danzy.fuelblast.network.FuelBlastNetwork;
 import com.danzy.fuelblast.target.FuelTarget;
+import com.danzy.fuelblast.target.SableFuelTarget;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -48,6 +49,13 @@ public final class FuelExplosion {
                             : Level.ExplosionInteraction.NONE);
         } finally {
             CHAIN_DEPTH.set(0);
+        }
+
+        // Sable stores the physical block in an embedded plot, not in the parent Level.
+        // The parent-world explosion still provides the shockwave/effects; remove the tank
+        // itself from the embedded plot so it cannot remain an immortal fuel source.
+        if (target instanceof SableFuelTarget sableTarget && FuelBlastConfig.breakBlocks.get()) {
+            sableTarget.destroyBlock();
         }
 
         FireScatter.scatter(blastLevel, center, power, fuel);
