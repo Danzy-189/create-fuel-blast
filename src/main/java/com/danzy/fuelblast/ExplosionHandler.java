@@ -6,6 +6,8 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
+import net.neoforged.neoforge.event.entity.ProjectileImpactEvent;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 
 import java.util.List;
@@ -24,20 +26,47 @@ public class ExplosionHandler {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onDetonate(ExplosionEvent.Detonate event) {
-        Level level = event.getLevel();
-        if (level == null || level.isClientSide()) return;
+        handleExplosion(event.getLevel(), ExplosionAccess.centerOf(event.getExplosion()),
+                ExplosionAccess.radiusOf(event.getExplosion()));
+    }
+
+    /** Fallback for weapon projectiles that never call Level.explode. */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public void onProjectileImpact(ProjectileImpactEvent event) {
+        Projectile projectile = event.getProjectile();
+        if (projectile.level().isClientSide() || !looksExplosive(projectile)) return;
+        handleExplosion(projectile.level(), projectile.position(), projectilePower(projectile));
+    }
+
+    public static void handleExplosion(Level level, Vec3 center, double power) {
+        if (level == null || level.isClientSide() || !FuelBlastConfig.enableFuelExplosions.get()) return;
 
         int depth = FuelExplosion.currentChainDepth();
+        if (depth > 0 && !FuelBlastConfig.enableChainReactions.get()) return;
         if (depth > FuelBlastConfig.maxChainDepth.get()) return;
 
-        Vec3 center = ExplosionAccess.centerOf(event.getExplosion());
-        double power = ExplosionAccess.radiusOf(event.getExplosion());
-        double radius = FuelBlastConfig.scanRadius.get() + FuelBlastConfig.radiusPerPower.get() * power;
-
+        double safePower = Math.max(0.1D, Math.min(power, 100.0D));
+        double radius = FuelBlastConfig.scanRadius.get() + FuelBlastConfig.radiusPerPower.get() * safePower;
         List<FuelTarget> targets = FuelScan.collect(level, center, radius);
         for (FuelTarget target : targets) {
-            if (BlastScheduler.isPrimed(target.key())) continue;
-            BlastScheduler.prime(level, target, depth + 1);
+            if (!BlastScheduler.isPrimed(target.key())) BlastScheduler.prime(level, target, depth + 1);
         }
+    }
+
+    private static boolean looksExplosive(Projectile projectile) {
+        String name = projectile.getClass().getName().toLowerCase(java.util.Locale.ROOT);
+        return name.contains("rocket") || name.contains("missile") || name.contains("bomb")
+                || name.contains("grenade") || name.contains("shell") || name.contains("warhead")
+                || name.contains("artillery") || name.contains("explosive") || name.contains("dynamite");
+    }
+
+    private static double projectilePower(Projectile projectile) {
+        for (String name : new String[]{"getExplosionPower", "getExplosionRadius", "getBlastRadius", "getPower"}) {
+            java.lang.reflect.Method method = com.danzy.fuelblast.compat.Reflect.publicMethodByName(
+                    projectile.getClass(), name, 0);
+            Object value = com.danzy.fuelblast.compat.Reflect.invoke(method, projectile);
+            if (value instanceof Number n && n.doubleValue() > 0.0D) return n.doubleValue();
+        }
+        return 4.0D;
     }
 }

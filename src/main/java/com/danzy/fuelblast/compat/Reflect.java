@@ -48,6 +48,18 @@ public final class Reflect {
         return null;
     }
 
+    /** Public method lookup including inherited/default interface methods. */
+    public static Method publicMethodByName(Class<?> owner, String name, int arity) {
+        if (owner == null) return null;
+        for (Method m : owner.getMethods()) {
+            if (m.getName().equals(name) && m.getParameterCount() == arity) {
+                try { m.setAccessible(true); } catch (Throwable ignored) {}
+                return m;
+            }
+        }
+        return methodByName(owner, name, arity);
+    }
+
     /** First method with the given name and arity, whatever the parameter types are. */
     public static Method methodByName(Class<?> owner, String name, int arity) {
         String key = owner.getName() + "~" + name + arity;

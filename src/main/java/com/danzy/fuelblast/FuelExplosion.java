@@ -2,6 +2,7 @@ package com.danzy.fuelblast;
 
 import com.danzy.fuelblast.network.BlastEffectPacket;
 import com.danzy.fuelblast.target.FuelTarget;
+import com.danzy.fuelblast.target.SableFuelTarget;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -47,6 +48,10 @@ public final class FuelExplosion {
                             : Level.ExplosionInteraction.NONE);
         } finally {
             CHAIN_DEPTH.set(0);
+        }
+
+        if (target instanceof SableFuelTarget sableTarget && FuelBlastConfig.breakBlocks.get()) {
+            sableTarget.destroyBlock();
         }
 
         FireScatter.scatter(blastLevel, center, power, fuel);

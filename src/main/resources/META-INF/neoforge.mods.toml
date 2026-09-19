@@ -72,3 +72,10 @@ inside, the bigger the fireball, and neighbouring tanks chain-react.
     versionRange="*"
     ordering="AFTER"
     side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="sable"
+    type="optional"
+    versionRange="*"
+    ordering="AFTER"
+    side="BOTH"

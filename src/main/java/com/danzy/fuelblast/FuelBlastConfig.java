@@ -24,6 +24,8 @@ public final class FuelBlastConfig {
     /** Fuse in ticks before a primed tank goes off (randomised between min and max). */
     public static final ModConfigSpec.IntValue minFuseTicks;
     public static final ModConfigSpec.IntValue maxFuseTicks;
+    public static final ModConfigSpec.BooleanValue enableFuelExplosions;
+    public static final ModConfigSpec.BooleanValue enableChainReactions;
     public static final ModConfigSpec.BooleanValue breakBlocks;
     public static final ModConfigSpec.BooleanValue causeFire;
     /** Number of chained detonations allowed from one original explosion. */
@@ -71,6 +73,10 @@ public final class FuelBlastConfig {
         b.pop();
 
         b.push("blast");
+        enableFuelExplosions = b.comment("Enable fuel containers reacting to nearby explosions")
+                .define("enableFuelExplosions", true);
+        enableChainReactions = b.comment("Allow fuel explosions to trigger nearby fuel containers")
+                .define("enableChainReactions", true);
         basePower = b.defineInRange("basePower", 1.5D, 0.0D, 50.0D);
         powerCoefficient = b.defineInRange("powerCoefficient", 1.35D, 0.0D, 50.0D);
         powerExponent = b.comment("Sub-linear growth keeps huge tanks fun instead of world-ending")
