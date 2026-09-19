@@ -4,7 +4,7 @@ import com.danzy.fuelblast.compat.ContraptionCompat;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 
 /**
  * Fallback for contraptions whose per-tank positions cannot be read (older Create builds,

@@ -11,8 +11,8 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import org.joml.Vector3f;
 
 /**
@@ -117,7 +117,7 @@ public final class BlastEffects {
         // --- sound ---------------------------------------------------------------------------
         float volume = Mth.clamp(2.0F + power * 0.9F, 1.0F, 18.0F);
         float pitch = Mth.clamp(1.25F - power * 0.06F, 0.45F, 1.2F);
-        level.playLocalSound(c.x, c.y, c.z, SoundEvents.GENERIC_EXPLODE, SoundSource.BLOCKS, volume, pitch, false);
+        level.playLocalSound(c.x, c.y, c.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.BLOCKS, volume, pitch, false);
         level.playLocalSound(c.x, c.y, c.z, SoundEvents.FIRECHARGE_USE, SoundSource.BLOCKS, volume * 0.7F, 0.5F, false);
         if (power > 6.0F) {
             level.playLocalSound(c.x, c.y, c.z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.BLOCKS,
@@ -133,7 +133,7 @@ public final class BlastEffects {
     }
 
     private static int tintOf(net.minecraft.resources.ResourceLocation fluidId) {
-        Fluid fluid = ForgeRegistries.FLUIDS.getValue(fluidId);
+        Fluid fluid = BuiltInRegistries.FLUID.get(fluidId);
         if (fluid == null) return 0xC8823C;
         try {
             int tint = IClientFluidTypeExtensions.of(fluid).getTintColor();

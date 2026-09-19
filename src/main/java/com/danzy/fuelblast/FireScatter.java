@@ -62,7 +62,7 @@ public final class FireScatter {
             for (Entity entity : level.getEntities((Entity) null,
                     new AABB(center, center).inflate(radius), e -> !e.fireImmune())) {
                 if (entity.position().distanceTo(center) > radius) continue;
-                entity.setSecondsOnFire(seconds);
+                entity.igniteForSeconds(seconds);
             }
         }
 

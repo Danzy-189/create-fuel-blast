@@ -13,42 +13,41 @@ permissions:
 
 jobs:
   build:
-    name: Forge 1.20.1
+    name: NeoForge 1.21.1
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.8"
+          gradle-version: "8.10.2"
 
-      # ForgeGradle decompiles and recompiles Minecraft on the first run.
-      - name: Cache ForgeGradle artifacts
+      # ModDevGradle decompiles Minecraft on the first run; the hosted runner has
+      # enough memory for it, and the NeoForm cache is restored between builds.
+      - name: Cache NeoForm artifacts
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.gradle/caches/forge_gradle
-            ~/.gradle/caches/minecraft
-          key: forgegradle-${{ runner.os }}-${{ hashFiles('gradle.properties') }}
-          restore-keys: forgegradle-${{ runner.os }}-
+          path: ~/.neoformruntime
+          key: neoform-${{ runner.os }}-${{ hashFiles('gradle.properties') }}
+          restore-keys: neoform-${{ runner.os }}-
 
       - name: Build
-        run: gradle clean build --stacktrace --no-daemon
+        run: gradle build --stacktrace --no-daemon
 
       - name: Upload jar
         uses: actions/upload-artifact@v4
         with:
-          name: fuelblast-forge-1.20.1
-          path: build/libs/*[!sources].jar
+          name: fuelblast-neoforge-1.21.1
+          path: build/libs/*.jar
           if-no-files-found: error
 
       - name: Publish release

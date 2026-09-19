@@ -6,14 +6,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 
-/**
- * A tank stored in a Sable physical sub-level. Sable keeps the block entity in an
- * embedded plot while its pose moves in the parent world, so neither a normal
- * LevelChunk scan nor Create's MountedStorageManager can see it.
- */
+/** A tank stored in a Sable physical sub-level used by Aeronautics/Simulated. */
 public final class SableFuelTarget implements FuelTarget {
     private final Object subLevel;
     private final Object embeddedLevel;
@@ -48,7 +44,8 @@ public final class SableFuelTarget implements FuelTarget {
         Object be = Reflect.invoke(Reflect.methodByName(embeddedLevel.getClass(), "getBlockEntity", 1),
                 embeddedLevel, localPos);
         if (!(be instanceof BlockEntity blockEntity) || blockEntity.isRemoved()) return null;
-        return blockEntity.getCapability(ForgeCapabilities.FLUID_HANDLER).orElse(null);
+        return Capabilities.FluidHandler.BLOCK.getCapability(parentLevel, localPos,
+                blockEntity.getBlockState(), blockEntity, null);
     }
 
     @Override
@@ -68,10 +65,9 @@ public final class SableFuelTarget implements FuelTarget {
         return !Boolean.TRUE.equals(removed) && handler() != null;
     }
 
-    /** Remove the tank block from the embedded plot after the parent-world blast. */
     public void destroyBlock() {
-        Object method = Reflect.method(embeddedLevel.getClass(), "destroyBlock", BlockPos.class, boolean.class,
-                Entity.class, int.class);
-        Reflect.invoke((java.lang.reflect.Method) method, embeddedLevel, localPos, true, null, 0);
+        java.lang.reflect.Method method = Reflect.method(embeddedLevel.getClass(), "destroyBlock",
+                BlockPos.class, boolean.class, Entity.class, int.class);
+        Reflect.invoke(method, embeddedLevel, localPos, true, null, 0);
     }
 }

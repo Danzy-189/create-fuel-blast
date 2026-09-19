@@ -2,7 +2,7 @@ package com.danzy.fuelblast.target;
 
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 
 /**
  * Something that stores fuel and can blow up: a block in the world, a tank mounted on a

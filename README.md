@@ -1,6 +1,6 @@
 # Create: Fuel Blast
 
-Аддон к **Create Aeronautics** для Minecraft **1.20.1 (Forge)**.
+Аддон к **Create Aeronautics** — ветка для Minecraft **1.21.1 (NeoForge 21.1.x, Create 6)**.
 
 Баки и сосуды с горючим топливом больше не безобидны: если рядом что-то взрывается —
 ТНТ, крипер, бомба из аддона или выстрел из оружия другого мода — бак детонирует сам.
@@ -45,33 +45,25 @@ Aeronautics и VS, а обращается к ним через кэширующ
 
 ## Версии
 
-Текущая проверенная сборка: **Create: Fuel Blast 0.3.1** для Minecraft 1.20.1 / Forge 47.3.0. В dev-classpath используются Create 6.0.8-291, Registrate MC1.20-1.3.3 и Flywheel 1.0.6-beta-266 из актуальных Maven-зеркал.
-
 | Ветка | Платформа |
 | --- | --- |
-| `main` | Minecraft 1.20.1, Forge 47.x (актуально для Create Aeronautics) |
-| `1.21.1-neoforge` | Minecraft 1.21.1, NeoForge 21.1.x, Create 6 |
+| `main` | Minecraft 1.21.1, NeoForge 21.1.x, Create 6 |
 
-Create Aeronautics официально выходит для 1.20.1, поэтому ветка 1.21.1 использует ту же
-рефлексивную совместимость — она подхватит Aeronautics/VS автоматически, как только они появятся
-на 1.21.1, а до тех пор полноценно работает с обычными баками и контрапциями Create 6.
+Версия проекта зафиксирована на Minecraft 1.21.1 / NeoForge. Совместимые версии Aeronautics, Sable и VS
+подхватываются мягкими reflection-интеграциями, а без них мод работает с обычными баками и контрапциями Create 6.
 
-## Исправленная обработка физических и оружейных взрывов
+## Физические и оружейные взрывы
 
-* Для физических конструкций Aeronautics/Simulated добавлена мягкая интеграция с **Sable**:
-  аддон перечисляет загруженные SubLevel-плоты, переводит координаты через текущий `logicalPose`
-  и читает fluid handlers из embedded chunks. Баки больше не теряются из-за того, что их нет в
-  обычных `LevelChunk` родительского мира.
-* Для ванильных и модовых вызовов `Level.explode` используется Forge `ExplosionEvent.Detonate`.
-* Для оружия, которое не вызывает `Level.explode`, добавлен fallback на `ProjectileImpactEvent`
-  для ракет, снарядов, бомб, гранат, мин и боеголовок.
-* Для оружейных модов с полностью собственной системой взрывов доступен API:
+* Sable SubLevel физики сканируются по глобальному bounding box и текущему `logicalPose`; баки
+  внутри движущейся конструкции больше не теряются в обычном мире.
+* Ванильные и модовые вызовы `Level.explode` обрабатываются через `ExplosionEvent.Detonate`.
+* Для ракет, бомб, гранат, мин, снарядов и боеголовок без `Level.explode` есть fallback через
+  `ProjectileImpactEvent`.
+* Полностью собственные системы оружейных взрывов могут вызвать:
 
 ```java
 FuelBlastApi.reportExplosion(level, explosionPosition, explosionPower);
 ```
-
-Он не создаёт второй взрыв — только передаёт событие в тот же сканер баков и цепную реакцию.
 
 ## Как это работает
 
@@ -135,6 +127,8 @@ FuelBlastApi.reportExplosion(level, explosionPosition, explosionPower);
 | `basePower` / `powerCoefficient` / `powerExponent` | 1.5 / 1.35 / 0.62 | кривая мощности |
 | `maxPower` | 14.0 | потолок мощности |
 | `minFuseTicks` / `maxFuseTicks` | 2 / 9 | фитиль |
+| `enableFuelExplosions` | true | основная механика |
+| `enableChainReactions` | true | цепная реакция баков |
 | `breakBlocks`, `causeFire` | true | разрушение и поджог |
 | `maxChainDepth` | 6 | глубина цепной реакции |
 | `contraptionTanks` | true | баки на собранных контрапциях |
@@ -150,13 +144,18 @@ FuelBlastApi.reportExplosion(level, explosionPosition, explosionPower);
 ## Сборка
 
 ```bash
-gradle build           # в CI используется Gradle 8.8
-# готовый jar появляется в build/libs
+gradle wrapper        # gradle-wrapper.jar не хранится в репозитории
+./gradlew build       # готовый jar в build/libs
 ./gradlew runClient   # запуск дев-клиента
 ```
 
-Зависимости для dev-окружения (Create, Registrate, Flywheel) тянутся из maven.tterrag.com.
-Опциональные аддоны для тестов раскомментируйте в `build.gradle`.
+Сборка на ModDevGradle (`net.neoforged.moddev`), Java 21, NeoForge 21.1.209,
+маппинги Parchment. Сам аддон компилируется **без Create**: все точки соприкосновения —
+капабилити `Capabilities.FluidHandler.BLOCK` и рефлексия. Create/Registrate/Flywheel в
+`build.gradle` закомментированы — раскомментируйте для тестов в деве.
+
+Текущий артефакт: `fuelblast-0.4.0+mc1.21.1.jar`, компилируется под Java 21
+без единой обязательной зависимости кроме NeoForge.
 
 ## Лицензия
 
@@ -164,10 +163,10 @@ MIT.
 
 ## CI
 
-`.github/workflows/build.yml` собирает jar штатным путём (ForgeGradle на `main`,
-ModDevGradle на `1.21.1-neoforge`) при каждом пуше и пул-реквесте, кладёт его в артефакты
+`.github/workflows/build.yml` собирает NeoForge 1.21.1 jar при каждом пуше
+и пул-реквесте, кладёт его в артефакты
 сборки, а по тегу `v*` автоматически создаёт GitHub Release с готовым jar.
 
 ```bash
-git tag v0.2.0 && git push origin v0.2.0   # -> релиз с jar
+git tag v0.4.0 && git push origin v0.4.0   # -> релиз с jar
 ```

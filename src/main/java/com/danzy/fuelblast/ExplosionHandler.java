@@ -3,12 +3,12 @@ package com.danzy.fuelblast;
 import com.danzy.fuelblast.target.FuelTarget;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.event.level.ExplosionEvent;
-import net.minecraftforge.event.entity.ProjectileImpactEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.level.ExplosionEvent;
+import net.neoforged.neoforge.event.entity.ProjectileImpactEvent;
 import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraftforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 
 import java.util.List;
 
@@ -26,16 +26,11 @@ public class ExplosionHandler {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onDetonate(ExplosionEvent.Detonate event) {
-        handleExplosion(event.getLevel(), event.getExplosion().getPosition(),
+        handleExplosion(event.getLevel(), ExplosionAccess.centerOf(event.getExplosion()),
                 ExplosionAccess.radiusOf(event.getExplosion()));
     }
 
-    /**
-     * Some weapon mods expose a projectile impact but create their own blast instead of
-     * calling Level.explode. This fallback covers the common rocket/bomb/grenade/shell
-     * entities without depending on any weapon mod classes. Mods with a different naming
-     * scheme can call FuelBlastApi.reportExplosion directly.
-     */
+    /** Fallback for weapon projectiles that never call Level.explode. */
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onProjectileImpact(ProjectileImpactEvent event) {
         Projectile projectile = event.getProjectile();
@@ -52,11 +47,9 @@ public class ExplosionHandler {
 
         double safePower = Math.max(0.1D, Math.min(power, 100.0D));
         double radius = FuelBlastConfig.scanRadius.get() + FuelBlastConfig.radiusPerPower.get() * safePower;
-
         List<FuelTarget> targets = FuelScan.collect(level, center, radius);
         for (FuelTarget target : targets) {
-            if (BlastScheduler.isPrimed(target.key())) continue;
-            BlastScheduler.prime(level, target, depth + 1);
+            if (!BlastScheduler.isPrimed(target.key())) BlastScheduler.prime(level, target, depth + 1);
         }
     }
 

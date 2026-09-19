@@ -13,11 +13,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.chunk.ChunkStatus;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -57,7 +57,6 @@ public final class FuelScan {
         }
 
         // 3. Sable physical sub-levels used by Aeronautics/Simulated.
-        // Their block entities are not in the parent LevelChunk map.
         if (FuelBlastConfig.aeronauticsInteriors.get()) {
             SableCompat.collect(level, center, radius, add);
         }
@@ -98,7 +97,7 @@ public final class FuelScan {
                     BlockPos pos = be.getBlockPos();
                     if (pos.getY() < min.getY() || pos.getY() > max.getY()) continue;
                     if (center.distanceToSqr(Vec3.atCenterOf(pos)) > radiusSq) continue;
-                    if (be.getCapability(ForgeCapabilities.FLUID_HANDLER).isPresent()) out.accept(pos);
+                    if (Capabilities.FluidHandler.BLOCK.getCapability(level, pos, null, be, null) != null) out.accept(pos);
                 }
             }
         }
@@ -110,7 +109,7 @@ public final class FuelScan {
                 if (center.distanceToSqr(Vec3.atCenterOf(pos)) > radiusSq) continue;
                 BlockEntity be = level.getBlockEntity(pos);
                 if (be == null || be.isRemoved()) continue;
-                if (be.getCapability(ForgeCapabilities.FLUID_HANDLER).isPresent()) {
+                if (Capabilities.FluidHandler.BLOCK.getCapability(level, pos, null, be, null) != null) {
                     out.accept(pos.immutable());
                 }
             }

@@ -1,17 +1,16 @@
 package com.danzy.fuelblast;
 
 import com.danzy.fuelblast.network.BlastEffectPacket;
-import com.danzy.fuelblast.network.FuelBlastNetwork;
 import com.danzy.fuelblast.target.FuelTarget;
 import com.danzy.fuelblast.target.SableFuelTarget;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /** Turns the fuel stored in a target into a properly sized explosion. */
 public final class FuelExplosion {
@@ -51,9 +50,6 @@ public final class FuelExplosion {
             CHAIN_DEPTH.set(0);
         }
 
-        // Sable stores the physical block in an embedded plot, not in the parent Level.
-        // The parent-world explosion still provides the shockwave/effects; remove the tank
-        // itself from the embedded plot so it cannot remain an immortal fuel source.
         if (target instanceof SableFuelTarget sableTarget && FuelBlastConfig.breakBlocks.get()) {
             sableTarget.destroyBlock();
         }
@@ -73,9 +69,7 @@ public final class FuelExplosion {
 
     private static void sendEffect(Level level, Vec3 center, BlastEffectPacket packet) {
         if (level instanceof ServerLevel serverLevel) {
-            FuelBlastNetwork.CHANNEL.send(
-                    PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(
-                            center.x, center.y, center.z, 192.0D, serverLevel.dimension())), packet);
+            PacketDistributor.sendToPlayersNear(serverLevel, null, center.x, center.y, center.z, 192.0D, packet);
         }
     }
 
@@ -102,8 +96,8 @@ public final class FuelExplosion {
             if (!FuelRegistry.isFuel(stack)) continue;
             if (best.isEmpty() || stack.getAmount() > best.getAmount()) best = stack;
         }
-        return best.isEmpty() ? new ResourceLocation("minecraft", "empty")
-                : ForgeRegistries.FLUIDS.getKey(best.getFluid());
+        return best.isEmpty() ? ResourceLocation.withDefaultNamespace("empty")
+                : BuiltInRegistries.FLUID.getKey(best.getFluid());
     }
 
     private FuelExplosion() {}
