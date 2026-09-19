@@ -1,0 +1,9 @@
+build/
+run/
+.gradle/
+src/generated/
+.idea/
+*.iml
+.eclipse/
+bin/
+gradle/wrapper/gradle-wrapper.jar
