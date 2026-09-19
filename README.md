@@ -119,6 +119,9 @@ gradle wrapper        # gradle-wrapper.jar не хранится в репози
 капабилити `Capabilities.FluidHandler.BLOCK` и рефлексия. Create/Registrate/Flywheel в
 `build.gradle` закомментированы — раскомментируйте для тестов в деве.
 
+Собранный jar ветки: `fuelblast-0.2.0+mc1.21.1.jar` (51 файл, ~58 КБ), компилируется под Java 21
+без единой обязательной зависимости кроме NeoForge.
+
 ### Что отличается от ветки 1.20.1
 
 * `ModConfigSpec` вместо `ForgeConfigSpec`, конструктор мода с `IEventBus` + `ModContainer`.

@@ -16,7 +16,7 @@ public record BlockFuelTarget(ServerLevel level, BlockPos pos) implements FuelTa
 
     @Override
     public IFluidHandler handler() {
-        return level.getCapability(Capabilities.FluidHandler.BLOCK, pos, null);
+        return Capabilities.FluidHandler.BLOCK.getCapability(level, pos, null, null, null);
     }
 
     @Override

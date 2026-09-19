@@ -97,7 +97,7 @@ public class ExplosionHandler {
                     BlockPos pos = be.getBlockPos();
                     if (pos.getY() < min.getY() || pos.getY() > max.getY()) continue;
                     if (center.distanceToSqr(Vec3.atCenterOf(pos)) > radiusSq) continue;
-                    if (level.getCapability(Capabilities.FluidHandler.BLOCK, pos, null) != null) out.accept(pos);
+                    if (Capabilities.FluidHandler.BLOCK.getCapability(level, pos, null, be, null) != null) out.accept(pos);
                 }
             }
         }
