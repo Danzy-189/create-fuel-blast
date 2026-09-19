@@ -49,8 +49,16 @@ public final class SableFuelTarget implements FuelTarget {
                 embeddedLevel, localPos);
         BlockEntity blockEntity = be instanceof BlockEntity found ? found : discoveredBlockEntity;
         if (blockEntity == null || blockEntity.isRemoved()) return null;
-        return Capabilities.FluidHandler.BLOCK.getCapability(parentLevel, localPos,
+        if (blockEntity instanceof IFluidHandler direct) return direct;
+        IFluidHandler capability = Capabilities.FluidHandler.BLOCK.getCapability(parentLevel, localPos,
                 blockEntity.getBlockState(), blockEntity, null);
+        if (capability != null) return capability;
+        for (String methodName : new String[]{"getFluidHandler", "getFluidTank", "getTank"}) {
+            Object value = Reflect.invoke(Reflect.publicMethodByName(blockEntity.getClass(), methodName, 0), blockEntity);
+            if (value instanceof IFluidHandler handler) return handler;
+        }
+        Object field = Reflect.fieldOfType(blockEntity, IFluidHandler.class);
+        return field instanceof IFluidHandler handler ? handler : null;
     }
 
     @Override

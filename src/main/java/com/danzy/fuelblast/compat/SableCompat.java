@@ -10,7 +10,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.capabilities.Capabilities;
 
 import java.util.function.Consumer;
 
@@ -58,10 +57,8 @@ public final class SableCompat {
                 for (BlockEntity be : levelChunk.getBlockEntities().values()) {
                     if (be.isRemoved()) continue;
                     BlockPos localPos = be.getBlockPos();
-                    if (Capabilities.FluidHandler.BLOCK.getCapability(level, localPos,
-                            be.getBlockState(), be, null) == null) continue;
                     SableFuelTarget target = new SableFuelTarget(subLevel, embedded, level, localPos, be);
-                    if (target.position().distanceToSqr(center) > radiusSq) continue;
+                    if (target.handler() == null || target.position().distanceToSqr(center) > radiusSq) continue;
                     out.accept(target);
                     matched++;
                 }
