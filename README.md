@@ -45,6 +45,8 @@ Aeronautics и VS, а обращается к ним через кэширующ
 
 ## Версии
 
+Текущая проверенная сборка: **Create: Fuel Blast 0.3.1** для Minecraft 1.20.1 / Forge 47.3.0. В dev-classpath используются Create 6.0.8-291, Registrate MC1.20-1.3.3 и Flywheel 1.0.6-beta-266 из актуальных Maven-зеркал.
+
 | Ветка | Платформа |
 | --- | --- |
 | `main` | Minecraft 1.20.1, Forge 47.x (актуально для Create Aeronautics) |
