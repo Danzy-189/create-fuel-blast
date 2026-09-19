@@ -1,26 +1,19 @@
 package com.danzy.fuelblast.network;
 
-import com.danzy.fuelblast.FuelBlast;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import com.danzy.fuelblast.client.BlastEffects;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.network.NetworkEvent;
+
+import java.util.function.Supplier;
 
 /** Server -> client notification that a fuel tank has just gone up. */
-public record BlastEffectPacket(Vec3 pos, float power, int fuelMb, ResourceLocation fluid)
-        implements CustomPacketPayload {
+public record BlastEffectPacket(Vec3 pos, float power, int fuelMb, ResourceLocation fluid) {
 
-    public static final Type<BlastEffectPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(FuelBlast.ID, "blast_effect"));
-
-    public static final StreamCodec<RegistryFriendlyByteBuf, BlastEffectPacket> STREAM_CODEC =
-            StreamCodec.of(BlastEffectPacket::write, BlastEffectPacket::read);
-
-    private static void write(RegistryFriendlyByteBuf buf, BlastEffectPacket p) {
+    public static void encode(BlastEffectPacket p, FriendlyByteBuf buf) {
         buf.writeDouble(p.pos.x);
         buf.writeDouble(p.pos.y);
         buf.writeDouble(p.pos.z);
@@ -29,21 +22,14 @@ public record BlastEffectPacket(Vec3 pos, float power, int fuelMb, ResourceLocat
         buf.writeResourceLocation(p.fluid);
     }
 
-    private static BlastEffectPacket read(RegistryFriendlyByteBuf buf) {
+    public static BlastEffectPacket decode(FriendlyByteBuf buf) {
         Vec3 pos = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
         return new BlastEffectPacket(pos, buf.readFloat(), buf.readVarInt(), buf.readResourceLocation());
     }
 
-    @Override
-    public Type<? extends CustomPacketPayload> type() {
-        return TYPE;
-    }
-
-    public static void handle(BlastEffectPacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> {
-            if (FMLEnvironment.dist == Dist.CLIENT) {
-                com.danzy.fuelblast.client.BlastEffects.play(packet);
-            }
-        });
+    public static void handle(BlastEffectPacket p, Supplier<NetworkEvent.Context> ctx) {
+        ctx.get().enqueueWork(() ->
+                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> BlastEffects.play(p)));
+        ctx.get().setPacketHandled(true);
     }
 }

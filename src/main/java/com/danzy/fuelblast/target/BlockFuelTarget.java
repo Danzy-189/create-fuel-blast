@@ -2,11 +2,12 @@ package com.danzy.fuelblast.target;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.fluids.capability.IFluidHandler;
 
-/** A tank, vessel or fluid container standing in the world (or in an airship interior). */
+/** A tank, vessel or fluid container standing in the world (or in a shipyard world). */
 public record BlockFuelTarget(ServerLevel level, BlockPos pos) implements FuelTarget {
 
     @Override
@@ -16,7 +17,9 @@ public record BlockFuelTarget(ServerLevel level, BlockPos pos) implements FuelTa
 
     @Override
     public IFluidHandler handler() {
-        return level.getCapability(Capabilities.FluidHandler.BLOCK, pos, null);
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be == null || be.isRemoved()) return null;
+        return be.getCapability(ForgeCapabilities.FLUID_HANDLER).orElse(null);
     }
 
     @Override

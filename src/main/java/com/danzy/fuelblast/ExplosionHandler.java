@@ -11,13 +11,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.event.level.ExplosionEvent;
-import net.neoforged.neoforge.event.server.ServerStartedEvent;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.event.level.ExplosionEvent;
+import net.minecraftforge.event.server.ServerStartedEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -46,7 +46,7 @@ public class ExplosionHandler {
         int depth = FuelExplosion.currentChainDepth();
         if (depth > FuelBlastConfig.maxChainDepth.get()) return;
 
-        Vec3 center = ExplosionAccess.centerOf(event.getExplosion());
+        Vec3 center = event.getExplosion().getPosition();
         double power = ExplosionAccess.radiusOf(event.getExplosion());
         double radius = FuelBlastConfig.scanRadius.get() + FuelBlastConfig.radiusPerPower.get() * power;
 
@@ -97,7 +97,7 @@ public class ExplosionHandler {
                     BlockPos pos = be.getBlockPos();
                     if (pos.getY() < min.getY() || pos.getY() > max.getY()) continue;
                     if (center.distanceToSqr(Vec3.atCenterOf(pos)) > radiusSq) continue;
-                    if (level.getCapability(Capabilities.FluidHandler.BLOCK, pos, null) != null) out.accept(pos);
+                    if (be.getCapability(ForgeCapabilities.FLUID_HANDLER).isPresent()) out.accept(pos);
                 }
             }
         }

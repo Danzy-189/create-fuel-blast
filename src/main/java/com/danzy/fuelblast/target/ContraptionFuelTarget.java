@@ -4,7 +4,7 @@ import com.danzy.fuelblast.compat.ContraptionCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.fluids.capability.IFluidHandler;
 
 /**
  * A tank welded onto an assembled Create / Create Aeronautics contraption.

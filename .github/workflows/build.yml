@@ -1,0 +1,59 @@
+name: Build
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Forge 1.20.1
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.8"
+
+      # ForgeGradle decompiles and recompiles Minecraft on the first run.
+      - name: Cache ForgeGradle artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches/forge_gradle
+            ~/.gradle/caches/minecraft
+          key: forgegradle-${{ runner.os }}-${{ hashFiles('gradle.properties') }}
+          restore-keys: forgegradle-${{ runner.os }}-
+
+      - name: Build
+        run: gradle build --stacktrace --no-daemon
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuelblast-forge-1.20.1
+          path: build/libs/*.jar
+          if-no-files-found: error
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/libs/*.jar
+          generate_release_notes: true

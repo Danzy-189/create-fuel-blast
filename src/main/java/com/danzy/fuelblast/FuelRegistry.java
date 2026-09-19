@@ -4,8 +4,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,7 +47,7 @@ public final class FuelRegistry {
     }
 
     private static double compute(Fluid fluid) {
-        ResourceLocation id = BuiltInRegistries.FLUID.getKey(fluid);
+        ResourceLocation id = ForgeRegistries.FLUIDS.getKey(fluid);
         if (id == null) return 0.0D;
         String key = id.toString();
 
