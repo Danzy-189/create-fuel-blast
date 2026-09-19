@@ -42,13 +42,13 @@ jobs:
           restore-keys: forgegradle-${{ runner.os }}-
 
       - name: Build
-        run: gradle build --stacktrace --no-daemon
+        run: gradle clean build --stacktrace --no-daemon
 
       - name: Upload jar
         uses: actions/upload-artifact@v4
         with:
           name: fuelblast-forge-1.20.1
-          path: build/libs/*.jar
+          path: build/libs/*[!sources].jar
           if-no-files-found: error
 
       - name: Publish release

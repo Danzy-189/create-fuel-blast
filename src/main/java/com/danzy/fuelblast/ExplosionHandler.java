@@ -25,9 +25,10 @@ public class ExplosionHandler {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onDetonate(ExplosionEvent.Detonate event) {
         Level level = event.getLevel();
-        if (level == null || level.isClientSide()) return;
+        if (level == null || level.isClientSide() || !FuelBlastConfig.enableFuelExplosions.get()) return;
 
         int depth = FuelExplosion.currentChainDepth();
+        if (depth > 0 && !FuelBlastConfig.enableChainReactions.get()) return;
         if (depth > FuelBlastConfig.maxChainDepth.get()) return;
 
         Vec3 center = event.getExplosion().getPosition();

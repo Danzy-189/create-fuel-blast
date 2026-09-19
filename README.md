@@ -131,8 +131,8 @@ Create Aeronautics официально выходит для 1.20.1, поэто
 ## Сборка
 
 ```bash
-gradle wrapper        # gradle-wrapper.jar не хранится в репозитории
-./gradlew build       # готовый jar в build/libs
+gradle build           # в CI используется Gradle 8.8
+# готовый jar появляется в build/libs
 ./gradlew runClient   # запуск дев-клиента
 ```
 
