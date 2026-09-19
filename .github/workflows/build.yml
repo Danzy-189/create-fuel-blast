@@ -1,0 +1,58 @@
+name: Build
+
+on:
+  push:
+    branches: [ "1.21.1-neoforge" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "1.21.1-neoforge" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: NeoForge 1.21.1
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      # ModDevGradle decompiles Minecraft on the first run; the hosted runner has
+      # enough memory for it, and the NeoForm cache is restored between builds.
+      - name: Cache NeoForm artifacts
+        uses: actions/cache@v4
+        with:
+          path: ~/.neoformruntime
+          key: neoform-${{ runner.os }}-${{ hashFiles('gradle.properties') }}
+          restore-keys: neoform-${{ runner.os }}-
+
+      - name: Build
+        run: gradle build --stacktrace --no-daemon
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuelblast-neoforge-1.21.1
+          path: build/libs/*.jar
+          if-no-files-found: error
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/libs/*.jar
+          generate_release_notes: true

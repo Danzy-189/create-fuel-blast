@@ -134,3 +134,13 @@ gradle wrapper        # gradle-wrapper.jar не хранится в репози
 ## Лицензия
 
 MIT.
+
+## CI
+
+`.github/workflows/build.yml` собирает jar штатным путём (ForgeGradle на `main`,
+ModDevGradle на `1.21.1-neoforge`) при каждом пуше и пул-реквесте, кладёт его в артефакты
+сборки, а по тегу `v*` автоматически создаёт GitHub Release с готовым jar.
+
+```bash
+git tag v0.2.0 && git push origin v0.2.0   # -> релиз с jar
+```
