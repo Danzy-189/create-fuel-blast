@@ -32,6 +32,7 @@ public class FuelBlast {
 
         MinecraftForge.EVENT_BUS.register(new ExplosionHandler());
         MinecraftForge.EVENT_BUS.register(BlastScheduler.class);
+        MinecraftForge.EVENT_BUS.register(FuelBlastCommands.class);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

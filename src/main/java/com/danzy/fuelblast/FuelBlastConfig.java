@@ -34,6 +34,16 @@ public final class FuelBlastConfig {
     public static final ForgeConfigSpec.BooleanValue contraptionTanks;
     /** Scan the interior levels of Create Aeronautics airships. */
     public static final ForgeConfigSpec.BooleanValue aeronauticsInteriors;
+    /** Leave burning fuel on the ground after the blast. */
+    public static final ForgeConfigSpec.BooleanValue leaveFire;
+    public static final ForgeConfigSpec.DoubleValue fireChance;
+    public static final ForgeConfigSpec.DoubleValue fireRadiusFactor;
+    public static final ForgeConfigSpec.IntValue maxFireBlocks;
+    public static final ForgeConfigSpec.BooleanValue igniteEntities;
+    /** Probe block positions directly when a level exposes no chunks (wrapped airship levels). */
+    public static final ForgeConfigSpec.BooleanValue deepScanFallback;
+    /** Log every scan and detonation - use this when a setup does not behave. */
+    public static final ForgeConfigSpec.BooleanValue debugLogging;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> fuelValues;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> fuelTags;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> blacklist;
@@ -54,6 +64,10 @@ public final class FuelBlastConfig {
                 .define("contraptionTanks", true);
         aeronauticsInteriors = b.comment("Project blasts into Create Aeronautics airship interiors")
                 .define("aeronauticsInteriors", true);
+        deepScanFallback = b.comment("Probe positions directly in levels that expose no chunks (wrapped airship levels)")
+                .define("deepScanFallback", true);
+        debugLogging = b.comment("Log what each blast scan finds and detonates")
+                .define("debugLogging", false);
         b.pop();
 
         b.push("blast");
@@ -68,6 +82,19 @@ public final class FuelBlastConfig {
         causeFire = b.define("causeFire", true);
         maxChainDepth = b.comment("How many times a fuel blast may set off further tanks")
                 .defineInRange("maxChainDepth", 6, 0, 64);
+        b.pop();
+
+        b.push("fire");
+        leaveFire = b.comment("Scatter burning fuel around the crater after the blast")
+                .define("leaveFire", true);
+        fireChance = b.comment("How readily a candidate spot catches fire (0 = never, 1 = always)")
+                .defineInRange("fireChance", 0.55D, 0.0D, 1.0D);
+        fireRadiusFactor = b.comment("Fire spread radius per point of blast power")
+                .defineInRange("fireRadiusFactor", 1.1D, 0.0D, 6.0D);
+        maxFireBlocks = b.comment("Hard cap on fire blocks placed by a single blast")
+                .defineInRange("maxFireBlocks", 48, 0, 1024);
+        igniteEntities = b.comment("Set entities caught in the fireball alight")
+                .define("igniteEntities", true);
         b.pop();
 
         b.push("fuels");

@@ -1,98 +1,139 @@
 package com.danzy.fuelblast.compat;
 
 import com.danzy.fuelblast.FuelBlast;
+import com.danzy.fuelblast.FuelBlastConfig;
+import com.danzy.fuelblast.target.ContraptionBulkFuelTarget;
 import com.danzy.fuelblast.target.ContraptionFuelTarget;
 import com.danzy.fuelblast.target.FuelTarget;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * Support for tanks mounted on assembled contraptions - Create trains, gantries,
- * and, most importantly, Create Aeronautics airships and aircraft.
+ * Tanks mounted on assembled contraptions: Create vehicles, trains, and the physics
+ * airships and aircraft of Create Aeronautics.
  *
- * Mounted tanks are not block entities: Create moves their contents into the
- * contraption's MountedStorageManager. This class reaches into that storage through
- * reflection so no compile-time dependency on internal Create APIs is needed.
+ * When a structure is assembled, Create removes the tank block entities and moves their
+ * contents into the contraption's {@code MountedStorageManager}. The layout differs between
+ * Create versions:
+ *
+ *   Create 6 (1.21.1): manager.getFluids().storages  -> Map&lt;BlockPos, MountedFluidStorage&gt;
+ *                      and MountedFluidStorage itself implements IFluidHandler.
+ *   Create 0.5.x:      manager.fluidStorage          -> Map&lt;BlockPos, MountedFluidStorage&gt;
+ *                      with a getFluidHandler() accessor.
+ *
+ * Both are handled, plus a pooled fallback when neither layout can be read.
  */
 public final class ContraptionCompat {
 
-    private static final String ENTITY_CLASS = "com.simibubi.create.content.contraptions.AbstractContraptionEntity";
+    private static final String[] ENTITY_CLASSES = {
+            "com.simibubi.create.content.contraptions.AbstractContraptionEntity",
+            "com.simibubi.create.content.contraptions.components.structureMovement.AbstractContraptionEntity"
+    };
 
-    public static boolean available() {
-        return Reflect.present(ENTITY_CLASS);
+    public static Class<?> entityClass() {
+        for (String name : ENTITY_CLASSES) {
+            Class<?> c = Reflect.clazz(name);
+            if (c != Void.class) return c;
+        }
+        return Void.class;
     }
 
-    /** Finds every fuel tank riding a contraption within {@code radius} of the blast. */
-    public static void collect(ServerLevel level, Vec3 center, double radius, Consumer<FuelTarget> out) {
-        if (!available()) return;
-        Class<?> entityClass = Reflect.clazz(ENTITY_CLASS);
+    public static boolean available() {
+        return entityClass() != Void.class;
+    }
 
-        AABB box = new AABB(center, center).inflate(radius + 32.0D);   // contraptions are big
-        List<Entity> contraptions = level.getEntities((Entity) null, box, entityClass::isInstance);
-        if (contraptions.isEmpty()) return;
+    /** Every contraption entity that could be touched by a blast of this size. */
+    public static List<Entity> nearbyContraptions(Level level, Vec3 center, double radius) {
+        Class<?> type = entityClass();
+        if (type == Void.class) return List.of();
 
+        // Contraptions can be huge and their entity position is the anchor, not the hull,
+        // so the query box is generous and the real test is done against the bounding box.
+        AABB query = new AABB(center, center).inflate(radius + 128.0D);
+        return level.getEntities((Entity) null, query, e ->
+                type.isInstance(e) && distanceTo(e.getBoundingBox(), center) <= radius);
+    }
+
+    public static void collect(Level level, Vec3 center, double radius, Consumer<FuelTarget> out) {
         double radiusSq = radius * radius;
-        for (Entity entity : contraptions) {
-            for (BlockPos local : fluidStoragePositions(entity)) {
-                Vec3 world = toWorld(entity, local);
-                if (world.distanceToSqr(center) > radiusSq) continue;
-                out.accept(new ContraptionFuelTarget(entity, local));
+
+        for (Entity entity : nearbyContraptions(level, center, radius)) {
+            boolean found = false;
+
+            Map<BlockPos, ?> storages = fluidStorages(entity);
+            if (storages != null) {
+                for (Map.Entry<BlockPos, ?> entry : storages.entrySet()) {
+                    if (handlerOf(entry.getValue()) == null) continue;
+                    Vec3 world = toWorld(entity, entry.getKey());
+                    if (world.distanceToSqr(center) > radiusSq) continue;
+                    out.accept(new ContraptionFuelTarget(entity, entry.getKey()));
+                    found = true;
+                }
+            }
+
+            // Fallback: the contraption has fuel but the per-tank layout is unreadable.
+            if (!found && combinedHandler(entity) != null) {
+                Vec3 hit = closestPoint(entity.getBoundingBox(), center);
+                out.accept(new ContraptionBulkFuelTarget(entity, hit));
+            }
+
+            if (FuelBlastConfig.debugLogging.get()) {
+                FuelBlast.LOGGER.info("[fuelblast] contraption {} #{}: {} mounted fluid storages, matched={}",
+                        entity.getClass().getSimpleName(), entity.getId(),
+                        storages == null ? -1 : storages.size(), found);
             }
         }
     }
 
-    /** Local (structure space) positions of every mounted fluid storage. */
+    /** Map of local position -> mounted fluid storage, or null when unreadable. */
     @SuppressWarnings("unchecked")
-    public static List<BlockPos> fluidStoragePositions(Entity contraptionEntity) {
-        List<BlockPos> result = new ArrayList<>();
-        Object storage = storageManager(contraptionEntity);
-        if (storage == null) return result;
+    public static Map<BlockPos, ?> fluidStorages(Entity contraptionEntity) {
+        Object manager = storageManager(contraptionEntity);
+        if (manager == null) return null;
 
-        Map<BlockPos, ?> map = fluidStorageMap(storage);
-        if (map == null) return result;
+        // Create 6: getFluids() returns MountedFluidStorageWrapper with a public 'storages' map.
+        Object wrapper = Reflect.invoke(Reflect.methodByName(manager.getClass(), "getFluids", 0), manager);
+        if (wrapper != null) {
+            Object map = Reflect.field(wrapper, "storages");
+            if (map instanceof Map<?, ?> m && keysAreBlockPos(m)) return (Map<BlockPos, ?>) m;
+        }
 
-        result.addAll(map.keySet());
-        return result;
+        // Create 0.5.x: the manager holds the map directly.
+        Object legacy = Reflect.field(manager, "fluidStorage", "fluidStorages", "mountedFluidStorage");
+        if (legacy instanceof Map<?, ?> m && keysAreBlockPos(m)) return (Map<BlockPos, ?>) m;
+
+        // Last resort: any BlockPos-keyed map whose values expose a fluid handler.
+        Object guess = Reflect.mapFieldMatching(manager, value -> handlerOf(value) != null);
+        if (guess instanceof Map<?, ?> m && keysAreBlockPos(m)) return (Map<BlockPos, ?>) m;
+
+        return null;
     }
 
     /** Live handler of one mounted tank, or null. */
     public static IFluidHandler storageAt(Entity contraptionEntity, BlockPos local) {
-        Object storage = storageManager(contraptionEntity);
-        if (storage == null) return null;
-
-        Map<BlockPos, ?> map = fluidStorageMap(storage);
-        if (map == null) return combinedHandler(storage);
-
-        Object mounted = map.get(local);
-        if (mounted == null) return null;
-
-        for (String name : new String[]{"getFluidHandler", "getFluids", "getTank", "getFluidTank"}) {
-            Method m = Reflect.methodByName(mounted.getClass(), name, 0);
-            Object handler = Reflect.invoke(m, mounted);
-            if (handler instanceof IFluidHandler h) return h;
-        }
-        Object field = Reflect.fieldOfType(mounted, IFluidHandler.class);
-        return field instanceof IFluidHandler h ? h : null;
+        Map<BlockPos, ?> storages = fluidStorages(contraptionEntity);
+        if (storages == null) return null;
+        return handlerOf(storages.get(local));
     }
 
-    /** Fallback: one handler covering the whole contraption. */
-    public static IFluidHandler combinedHandler(Object storageManager) {
-        Method m = Reflect.methodByName(storageManager.getClass(), "getFluids", 0);
-        Object handler = Reflect.invoke(m, storageManager);
-        return handler instanceof IFluidHandler h ? h : null;
+    /** One handler covering every mounted tank of the contraption. */
+    public static IFluidHandler combinedHandler(Entity contraptionEntity) {
+        Object manager = storageManager(contraptionEntity);
+        if (manager == null) return null;
+        Object wrapper = Reflect.invoke(Reflect.methodByName(manager.getClass(), "getFluids", 0), manager);
+        return handlerOf(wrapper);
     }
 
-    /** Structure-space position -> world position, following rotation and movement. */
+    /** Structure-space position -> world position, following the hull's rotation and motion. */
     public static Vec3 toWorld(Entity contraptionEntity, BlockPos local) {
         Vec3 localCenter = Vec3.atCenterOf(local);
         Method m = Reflect.method(contraptionEntity.getClass(), "toGlobalVector", Vec3.class, float.class);
@@ -102,50 +143,41 @@ public final class ContraptionCompat {
         return contraptionEntity.position().add(localCenter);
     }
 
-    private static Object storageManager(Entity contraptionEntity) {
-        Method getContraption = Reflect.methodByName(contraptionEntity.getClass(), "getContraption", 0);
-        Object contraption = Reflect.invoke(getContraption, contraptionEntity);
+    public static Object storageManager(Entity contraptionEntity) {
+        Object contraption = Reflect.invoke(
+                Reflect.methodByName(contraptionEntity.getClass(), "getContraption", 0), contraptionEntity);
         if (contraption == null) return null;
 
-        for (String name : new String[]{"getStorage", "getSharedInventory", "getStorageManager"}) {
-            Method m = Reflect.methodByName(contraption.getClass(), name, 0);
-            Object storage = Reflect.invoke(m, contraption);
-            if (storage != null && storage.getClass().getName().contains("Storage")) return storage;
-        }
-        Object field = Reflect.field(contraption, "storage");
-        if (field != null) return field;
-
-        FuelBlast.LOGGER.debug("Could not read mounted storage of {}", contraption.getClass());
-        return null;
+        Object manager = Reflect.invoke(Reflect.methodByName(contraption.getClass(), "getStorage", 0), contraption);
+        if (manager != null) return manager;
+        return Reflect.field(contraption, "storage", "storageProxy");
     }
 
-    /** The Map&lt;BlockPos, MountedFluidStorage&gt; inside a MountedStorageManager. */
-    @SuppressWarnings("unchecked")
-    private static Map<BlockPos, ?> fluidStorageMap(Object storageManager) {
-        Object direct = Reflect.field(storageManager, "fluidStorage", "mountedFluidStorage", "fluids");
-        if (direct instanceof Map<?, ?> map && looksLikeFluidMap(map)) return (Map<BlockPos, ?>) map;
-
-        Class<?> c = storageManager.getClass();
-        while (c != null && c != Object.class) {
-            for (java.lang.reflect.Field f : c.getDeclaredFields()) {
-                try {
-                    f.setAccessible(true);
-                    Object value = f.get(storageManager);
-                    if (value instanceof Map<?, ?> map && looksLikeFluidMap(map)) return (Map<BlockPos, ?>) map;
-                } catch (Throwable ignored) {
-                }
-            }
-            c = c.getSuperclass();
+    private static IFluidHandler handlerOf(Object mounted) {
+        if (mounted == null) return null;
+        if (mounted instanceof IFluidHandler h) return h;            // Create 6
+        for (String name : new String[]{"getFluidHandler", "getTank", "getFluidTank", "getFluids"}) {
+            Object handler = Reflect.invoke(Reflect.methodByName(mounted.getClass(), name, 0), mounted);
+            if (handler instanceof IFluidHandler h) return h;        // Create 0.5.x
         }
-        return null;
+        Object field = Reflect.fieldOfType(mounted, IFluidHandler.class);
+        return field instanceof IFluidHandler h ? h : null;
     }
 
-    private static boolean looksLikeFluidMap(Map<?, ?> map) {
+    private static boolean keysAreBlockPos(Map<?, ?> map) {
         if (map.isEmpty()) return false;
-        Map.Entry<?, ?> first = map.entrySet().iterator().next();
-        return first.getKey() instanceof BlockPos
-                && first.getValue() != null
-                && first.getValue().getClass().getSimpleName().toLowerCase().contains("fluid");
+        return map.keySet().iterator().next() instanceof BlockPos;
+    }
+
+    public static double distanceTo(AABB box, Vec3 point) {
+        return closestPoint(box, point).distanceTo(point);
+    }
+
+    public static Vec3 closestPoint(AABB box, Vec3 point) {
+        return new Vec3(
+                Math.max(box.minX, Math.min(point.x, box.maxX)),
+                Math.max(box.minY, Math.min(point.y, box.maxY)),
+                Math.max(box.minZ, Math.min(point.z, box.maxZ)));
     }
 
     private ContraptionCompat() {}
