@@ -1,45 +1,45 @@
 package com.danzy.fuelblast;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.List;
 
 /** All tunables of the addon. */
 public final class FuelBlastConfig {
-    public static final ForgeConfigSpec SPEC;
+    public static final ModConfigSpec SPEC;
 
     /** How far from an explosion centre tanks are scanned, in blocks. */
-    public static final ForgeConfigSpec.DoubleValue scanRadius;
+    public static final ModConfigSpec.DoubleValue scanRadius;
     /** Extra reach added per point of triggering explosion power. */
-    public static final ForgeConfigSpec.DoubleValue radiusPerPower;
+    public static final ModConfigSpec.DoubleValue radiusPerPower;
     /** Tanks holding less fuel than this (mB) are ignored. */
-    public static final ForgeConfigSpec.IntValue minFuelMb;
+    public static final ModConfigSpec.IntValue minFuelMb;
     /** Blast power for the first bucket of fuel. */
-    public static final ForgeConfigSpec.DoubleValue basePower;
+    public static final ModConfigSpec.DoubleValue basePower;
     /** Scaling coefficient: power = base + coefficient * (buckets * energy) ^ exponent. */
-    public static final ForgeConfigSpec.DoubleValue powerCoefficient;
-    public static final ForgeConfigSpec.DoubleValue powerExponent;
+    public static final ModConfigSpec.DoubleValue powerCoefficient;
+    public static final ModConfigSpec.DoubleValue powerExponent;
     /** Hard cap so a 100k mB industrial tank does not erase the server. */
-    public static final ForgeConfigSpec.DoubleValue maxPower;
+    public static final ModConfigSpec.DoubleValue maxPower;
     /** Fuse in ticks before a primed tank goes off (randomised between min and max). */
-    public static final ForgeConfigSpec.IntValue minFuseTicks;
-    public static final ForgeConfigSpec.IntValue maxFuseTicks;
-    public static final ForgeConfigSpec.BooleanValue breakBlocks;
-    public static final ForgeConfigSpec.BooleanValue causeFire;
+    public static final ModConfigSpec.IntValue minFuseTicks;
+    public static final ModConfigSpec.IntValue maxFuseTicks;
+    public static final ModConfigSpec.BooleanValue breakBlocks;
+    public static final ModConfigSpec.BooleanValue causeFire;
     /** Number of chained detonations allowed from one original explosion. */
-    public static final ForgeConfigSpec.IntValue maxChainDepth;
+    public static final ModConfigSpec.IntValue maxChainDepth;
     /** Guess flammability from the fluid name when it is not tagged/listed. */
-    public static final ForgeConfigSpec.BooleanValue heuristicDetection;
+    public static final ModConfigSpec.BooleanValue heuristicDetection;
     /** Scan tanks mounted on assembled Create / Create Aeronautics contraptions. */
-    public static final ForgeConfigSpec.BooleanValue contraptionTanks;
+    public static final ModConfigSpec.BooleanValue contraptionTanks;
     /** Scan the interior levels of Create Aeronautics airships. */
-    public static final ForgeConfigSpec.BooleanValue aeronauticsInteriors;
-    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> fuelValues;
-    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> fuelTags;
-    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> blacklist;
+    public static final ModConfigSpec.BooleanValue aeronauticsInteriors;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> fuelValues;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> fuelTags;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> blacklist;
 
     static {
-        ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
+        ModConfigSpec.Builder b = new ModConfigSpec.Builder();
 
         b.push("detection");
         scanRadius = b.comment("Base radius (blocks) scanned for fuel tanks around an explosion")

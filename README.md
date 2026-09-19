@@ -1,6 +1,8 @@
 # Create: Fuel Blast
 
-Аддон к **Create Aeronautics** для Minecraft **1.20.1 (Forge)**.
+Аддон к **Create Aeronautics** — ветка для Minecraft **1.21.1 (NeoForge 21.1.x, Create 6)**.
+
+> Основная ветка проекта (`main`) — версия под 1.20.1 Forge.
 
 Баки и сосуды с горючим топливом больше не безобидны: если рядом что-то взрывается —
 ТНТ, крипер, бомба из аддона или выстрел из оружия другого мода — бак детонирует сам.
@@ -112,8 +114,19 @@ gradle wrapper        # gradle-wrapper.jar не хранится в репози
 ./gradlew runClient   # запуск дев-клиента
 ```
 
-Зависимости для dev-окружения (Create, Registrate, Flywheel) тянутся из maven.tterrag.com.
-Опциональные аддоны для тестов раскомментируйте в `build.gradle`.
+Сборка на NeoGradle ModDevGradle (`net.neoforged.moddev` 2.0.78), Java 21, NeoForge 21.1.209,
+маппинги Parchment. Сам аддон компилируется **без Create**: все точки соприкосновения —
+капабилити `Capabilities.FluidHandler.BLOCK` и рефлексия. Create/Registrate/Flywheel в
+`build.gradle` закомментированы — раскомментируйте для тестов в деве.
+
+### Что отличается от ветки 1.20.1
+
+* `ModConfigSpec` вместо `ForgeConfigSpec`, конструктор мода с `IEventBus` + `ModContainer`.
+* Сеть на `CustomPacketPayload` + `StreamCodec` и `PacketDistributor.sendToPlayersNear`.
+* Капабилити нового API вместо `ForgeCapabilities`, реестры через `BuiltInRegistries`.
+* `ServerTickEvent.Post` вместо `TickEvent.ServerTickEvent`, `ResourceLocation.fromNamespaceAndPath`.
+* Центр и радиус взрыва читаются через `ExplosionAccess` (методы `center()`/`getPosition()`
+  и поля — так порт переживёт мелкие изменения ванильного `Explosion`).
 
 ## Лицензия
 
