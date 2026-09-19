@@ -1,16 +1,15 @@
 package com.danzy.fuelblast;
 
 import com.danzy.fuelblast.network.BlastEffectPacket;
-import com.danzy.fuelblast.network.FuelBlastNetwork;
 import com.danzy.fuelblast.target.FuelTarget;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /** Turns the fuel stored in a target into a properly sized explosion. */
 public final class FuelExplosion {
@@ -53,16 +52,12 @@ public final class FuelExplosion {
         }
 
         BlastEffectPacket packet = new BlastEffectPacket(center, power, fuel, fluidId);
-        FuelBlastNetwork.CHANNEL.send(
-                PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(
-                        center.x, center.y, center.z, 192.0D, blastLevel.dimension())), packet);
+        PacketDistributor.sendToPlayersNear(blastLevel, null, center.x, center.y, center.z, 192.0D, packet);
 
         // Contraption tanks live in structure space; players see the airship, not the interior,
         // so the visuals are also sent to everyone watching the parent level.
         if (blastLevel != level) {
-            FuelBlastNetwork.CHANNEL.send(
-                    PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(
-                            center.x, center.y, center.z, 192.0D, level.dimension())), packet);
+            PacketDistributor.sendToPlayersNear(level, null, center.x, center.y, center.z, 192.0D, packet);
         }
     }
 
@@ -89,8 +84,8 @@ public final class FuelExplosion {
             if (!FuelRegistry.isFuel(stack)) continue;
             if (best.isEmpty() || stack.getAmount() > best.getAmount()) best = stack;
         }
-        return best.isEmpty() ? new ResourceLocation("minecraft", "empty")
-                : ForgeRegistries.FLUIDS.getKey(best.getFluid());
+        return best.isEmpty() ? ResourceLocation.withDefaultNamespace("empty")
+                : BuiltInRegistries.FLUID.getKey(best.getFluid());
     }
 
     private FuelExplosion() {}

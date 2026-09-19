@@ -1,6 +1,6 @@
 package com.danzy.fuelblast.target;
 
-import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.minecraft.world.phys.Vec3;
 
 /**

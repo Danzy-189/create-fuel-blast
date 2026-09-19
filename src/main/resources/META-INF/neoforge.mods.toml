@@ -1,5 +1,5 @@
 modLoader="javafml"
-loaderVersion="${loader_version_range}"
+loaderVersion="[4,)"
 license="${mod_license}"
 issueTrackerURL="https://github.com/Danzy-189/create-fuel-blast/issues"
 
@@ -11,56 +11,64 @@ authors="${mod_authors}"
 description='''
 Addon for Create Aeronautics. Fluid tanks and vessels that store flammable fuel
 (Create: Diesel Generators, The Factory Must Grow, and any fluid tagged as fuel)
-now cook off when an explosion happens next to them - TNT, creepers, addon bombs
-or modded weapons. The more fuel inside, the bigger the fireball, and neighbouring
-tanks go off in a chain reaction.
+cook off when an explosion happens next to them - TNT, creepers, addon bombs or
+modded weapons. Works for tanks in the world, tanks mounted on assembled
+contraptions, airship interiors and Valkyrien Skies physics ships. The more fuel
+inside, the bigger the fireball, and neighbouring tanks chain-react.
 '''
 
 [[dependencies.${mod_id}]]
-    modId="forge"
-    mandatory=true
-    versionRange="${forge_version_range}"
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1.0,)"
     ordering="NONE"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
     modId="minecraft"
-    mandatory=true
-    versionRange="${minecraft_version_range}"
+    type="required"
+    versionRange="[1.21.1,1.22)"
     ordering="NONE"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
     modId="create"
-    mandatory=true
-    versionRange="[0.5.1,)"
+    type="optional"
+    versionRange="*"
     ordering="AFTER"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
     modId="create_connected"
-    mandatory=false
+    type="optional"
     versionRange="*"
     ordering="AFTER"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
     modId="createdieselgenerators"
-    mandatory=false
+    type="optional"
     versionRange="*"
     ordering="AFTER"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
     modId="createindustry"
-    mandatory=false
+    type="optional"
     versionRange="*"
     ordering="AFTER"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
     modId="aeronautics"
-    mandatory=false
+    type="optional"
+    versionRange="*"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="valkyrienskies"
+    type="optional"
     versionRange="*"
     ordering="AFTER"
     side="BOTH"

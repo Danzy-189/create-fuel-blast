@@ -1,23 +1,18 @@
 package com.danzy.fuelblast.network;
 
 import com.danzy.fuelblast.FuelBlast;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.simple.SimpleChannel;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
+@EventBusSubscriber(modid = FuelBlast.ID, bus = EventBusSubscriber.Bus.MOD)
 public final class FuelBlastNetwork {
-    private static final String VERSION = "1";
 
-    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(FuelBlast.ID, "main"),
-            () -> VERSION, VERSION::equals, VERSION::equals);
-
-    public static void register() {
-        CHANNEL.messageBuilder(BlastEffectPacket.class, 0)
-                .encoder(BlastEffectPacket::encode)
-                .decoder(BlastEffectPacket::decode)
-                .consumerMainThread(BlastEffectPacket::handle)
-                .add();
+    @SubscribeEvent
+    public static void register(RegisterPayloadHandlersEvent event) {
+        PayloadRegistrar registrar = event.registrar("1").optional();
+        registrar.playToClient(BlastEffectPacket.TYPE, BlastEffectPacket.STREAM_CODEC, BlastEffectPacket::handle);
     }
 
     private FuelBlastNetwork() {}
