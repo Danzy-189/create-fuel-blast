@@ -24,5 +24,6 @@ public class FuelBlast {
 
         NeoForge.EVENT_BUS.register(new ExplosionHandler());
         NeoForge.EVENT_BUS.register(BlastScheduler.class);
+        NeoForge.EVENT_BUS.register(FuelBlastCommands.class);
     }
 }

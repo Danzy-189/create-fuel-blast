@@ -112,5 +112,26 @@ public final class Reflect {
         return null;
     }
 
+    /** First BlockPos-keyed map field whose values satisfy the predicate. */
+    public static Object mapFieldMatching(Object target, java.util.function.Predicate<Object> valueTest) {
+        if (target == null) return null;
+        Class<?> c = target.getClass();
+        while (c != null && c != Object.class) {
+            for (Field f : c.getDeclaredFields()) {
+                try {
+                    f.setAccessible(true);
+                    Object value = f.get(target);
+                    if (value instanceof Map<?, ?> map && !map.isEmpty()
+                            && valueTest.test(map.values().iterator().next())) {
+                        return value;
+                    }
+                } catch (Throwable ignored) {
+                }
+            }
+            c = c.getSuperclass();
+        }
+        return null;
+    }
+
     private Reflect() {}
 }

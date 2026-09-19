@@ -2,7 +2,7 @@ package com.danzy.fuelblast;
 
 import com.danzy.fuelblast.target.FuelTarget;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.phys.Vec3;
@@ -22,7 +22,7 @@ import java.util.Set;
  */
 public final class BlastScheduler {
 
-    private record Primed(ServerLevel level, FuelTarget target, int depth, int[] fuse) {}
+    private record Primed(Level level, FuelTarget target, int depth, int[] fuse) {}
 
     private static final List<Primed> PENDING = new ArrayList<>();
     private static final Set<String> PRIMED_KEYS = new HashSet<>();
@@ -31,17 +31,18 @@ public final class BlastScheduler {
         return PRIMED_KEYS.contains(key);
     }
 
-    public static void prime(ServerLevel level, FuelTarget target, int depth) {
+    public static void prime(Level level, FuelTarget target, int depth) {
         int min = FuelBlastConfig.minFuseTicks.get();
         int max = Math.max(min, FuelBlastConfig.maxFuseTicks.get());
-        int fuse = min + level.random.nextInt(max - min + 1);
+        int fuse = min + level.getRandom().nextInt(max - min + 1);
 
         PENDING.add(new Primed(level, target, depth, new int[]{fuse}));
         PRIMED_KEYS.add(target.key());
 
         Vec3 p = target.position();
-        level.playSound(null, BlockPos.containing(p), SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS,
-                1.6F, 0.6F + level.random.nextFloat() * 0.2F);
+        Level soundLevel = target.level() != null ? target.level() : level;
+        soundLevel.playSound(null, BlockPos.containing(p), SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS,
+                1.6F, 0.6F + level.getRandom().nextFloat() * 0.2F);
     }
 
     @SubscribeEvent

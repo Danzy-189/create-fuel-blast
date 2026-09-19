@@ -2,13 +2,13 @@ package com.danzy.fuelblast;
 
 import com.danzy.fuelblast.network.BlastEffectPacket;
 import com.danzy.fuelblast.target.FuelTarget;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /** Turns the fuel stored in a target into a properly sized explosion. */
@@ -20,11 +20,11 @@ public final class FuelExplosion {
         return CHAIN_DEPTH.get();
     }
 
-    public static void detonate(ServerLevel level, FuelTarget target, int depth) {
+    public static void detonate(Level originLevel, FuelTarget target, int depth) {
         IFluidHandler handler = target.handler();
         if (handler == null) return;
 
-        int fuel = ExplosionHandler.fuelAmount(handler);
+        int fuel = FuelScan.fuelAmount(handler);
         if (fuel < FuelBlastConfig.minFuelMb.get()) return;
 
         ResourceLocation fluidId = dominantFluid(handler);
@@ -32,9 +32,7 @@ public final class FuelExplosion {
 
         float power = (float) powerFor(fuel);
         Vec3 center = target.position();
-
-        // A blast inside an airship interior must be felt in that level, not the outside one.
-        ServerLevel blastLevel = target instanceof com.danzy.fuelblast.target.BlockFuelTarget b ? b.level() : level;
+        Level blastLevel = target.level() != null ? target.level() : originLevel;
 
         CHAIN_DEPTH.set(depth);
         try {
@@ -51,13 +49,22 @@ public final class FuelExplosion {
             CHAIN_DEPTH.set(0);
         }
 
-        BlastEffectPacket packet = new BlastEffectPacket(center, power, fuel, fluidId);
-        PacketDistributor.sendToPlayersNear(blastLevel, null, center.x, center.y, center.z, 192.0D, packet);
+        FireScatter.scatter(blastLevel, center, power, fuel);
 
-        // Contraption tanks live in structure space; players see the airship, not the interior,
-        // so the visuals are also sent to everyone watching the parent level.
-        if (blastLevel != level) {
-            PacketDistributor.sendToPlayersNear(level, null, center.x, center.y, center.z, 192.0D, packet);
+        BlastEffectPacket packet = new BlastEffectPacket(center, power, fuel, fluidId);
+        sendEffect(blastLevel, center, packet);
+        // Tanks inside an airship interior are watched from the outside level too.
+        if (blastLevel != originLevel) sendEffect(originLevel, center, packet);
+
+        if (FuelBlastConfig.debugLogging.get()) {
+            FuelBlast.LOGGER.info("[fuelblast] detonated {} with {} mB -> power {}",
+                    target.describe(), fuel, String.format("%.2f", power));
+        }
+    }
+
+    private static void sendEffect(Level level, Vec3 center, BlastEffectPacket packet) {
+        if (level instanceof ServerLevel serverLevel) {
+            PacketDistributor.sendToPlayersNear(serverLevel, null, center.x, center.y, center.z, 192.0D, packet);
         }
     }
 

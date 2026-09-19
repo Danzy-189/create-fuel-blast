@@ -1,6 +1,6 @@
 package com.danzy.fuelblast.compat;
 
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 import java.lang.reflect.Method;
@@ -26,7 +26,7 @@ public final class ValkyrienCompat {
     /**
      * @return the original blast position plus its equivalent inside every nearby ship.
      */
-    public static List<Vec3> origins(ServerLevel level, Vec3 center, double radius) {
+    public static List<Vec3> origins(Level level, Vec3 center, double radius) {
         List<Vec3> result = new ArrayList<>(2);
         result.add(center);
         if (!available()) return result;
