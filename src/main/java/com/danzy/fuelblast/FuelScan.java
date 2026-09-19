@@ -38,11 +38,14 @@ public final class FuelScan {
         Set<IFluidHandler> seenHandlers = new HashSet<>();
 
         Consumer<FuelTarget> add = target -> {
-            if (!seenKeys.add(target.key())) return;
+            // Check fuel before reserving the key. In a multiblock, an empty segment may
+            // be visited before the controller segment; reserving its key used to hide the
+            // actual full tank and also made stale primed entries possible.
             IFluidHandler handler = target.handler();
-            if (handler == null) return;
+            if (handler == null || fuelAmount(handler) < FuelBlastConfig.minFuelMb.get()) return;
+            if (FuelExplosion.isConsumed(target.key())) return;
+            if (!seenKeys.add(target.key())) return;
             if (!seenHandlers.add(handler)) return;                 // shared multiblock handler
-            if (fuelAmount(handler) < FuelBlastConfig.minFuelMb.get()) return;
             found.add(target);
         };
 

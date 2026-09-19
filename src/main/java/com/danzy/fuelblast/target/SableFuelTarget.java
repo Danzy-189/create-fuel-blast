@@ -64,7 +64,8 @@ public final class SableFuelTarget implements FuelTarget {
     @Override
     public String key() {
         Object id = Reflect.invoke(Reflect.methodByName(subLevel.getClass(), "getUniqueId", 0), subLevel);
-        return "sable:" + (id == null ? System.identityHashCode(subLevel) : id) + "@" + localPos.asLong();
+        return "sable:" + (id == null ? System.identityHashCode(subLevel) : id)
+                + "@controller:" + controllerPos().asLong();
     }
 
     @Override
@@ -78,9 +79,61 @@ public final class SableFuelTarget implements FuelTarget {
         return !Boolean.TRUE.equals(removed) && handler() != null;
     }
 
-    public void destroyBlock() {
+    @Override
+    public void removeAfterDetonation() {
+        java.util.List<BlockPos> group = new java.util.ArrayList<>();
+        Object plot = Reflect.invoke(Reflect.methodByName(subLevel.getClass(), "getPlot", 0), subLevel);
+        Object loaded = plot == null ? null
+                : Reflect.invoke(Reflect.methodByName(plot.getClass(), "getLoadedChunks", 0), plot);
+        if (loaded instanceof Iterable<?> chunks) {
+            String groupKey = key();
+            for (Object holder : chunks) {
+                Object chunk = Reflect.invoke(Reflect.methodByName(holder.getClass(), "getChunk", 0), holder);
+                if (!(chunk instanceof net.minecraft.world.level.chunk.LevelChunk levelChunk)) continue;
+                for (BlockEntity be : levelChunk.getBlockEntities().values()) {
+                    if (be.isRemoved() || !groupKey.equals(controllerKey(be))) continue;
+                    group.add(be.getBlockPos().immutable());
+                }
+            }
+        }
+        if (group.isEmpty()) group.add(localPos);
+        for (BlockPos pos : group) destroyBlockAt(pos);
+    }
+
+    private void destroyBlockAt(BlockPos pos) {
         java.lang.reflect.Method method = Reflect.method(embeddedLevel.getClass(), "destroyBlock",
                 BlockPos.class, boolean.class, Entity.class, int.class);
-        Reflect.invoke(method, embeddedLevel, localPos, true, null, 0);
+        Reflect.invoke(method, embeddedLevel, pos, true, null, 0);
+    }
+
+    /** Create FluidTankBlockEntity exposes getController(); vessels use the same convention. */
+    private BlockPos controllerPos() {
+        BlockPos controller = controllerPosition(currentBlockEntity());
+        return controller == null ? localPos : controller;
+    }
+
+    private String controllerKey(BlockEntity be) {
+        BlockPos pos = controllerPosition(be);
+        if (pos == null) pos = be.getBlockPos();
+        Object id = Reflect.invoke(Reflect.methodByName(subLevel.getClass(), "getUniqueId", 0), subLevel);
+        return "sable:" + (id == null ? System.identityHashCode(subLevel) : id)
+                + "@controller:" + pos.asLong();
+    }
+
+    private BlockPos controllerPosition(BlockEntity be) {
+        if (be == null) return null;
+        Object controller = Reflect.invoke(Reflect.publicMethodByName(be.getClass(), "getController", 0), be);
+        if (controller instanceof BlockPos pos) return pos.immutable();
+        Object field = Reflect.field(be, "controller", "controllerPos");
+        if (field instanceof BlockPos pos) return pos.immutable();
+        Object controllerBe = Reflect.invoke(Reflect.publicMethodByName(be.getClass(), "getControllerBE", 0), be);
+        if (controllerBe instanceof BlockEntity controllerEntity) return controllerEntity.getBlockPos().immutable();
+        return null;
+    }
+
+    private BlockEntity currentBlockEntity() {
+        Object be = Reflect.invoke(Reflect.methodByName(embeddedLevel.getClass(), "getBlockEntity", 1),
+                embeddedLevel, localPos);
+        return be instanceof BlockEntity blockEntity ? blockEntity : discoveredBlockEntity;
     }
 }

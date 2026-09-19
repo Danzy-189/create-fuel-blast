@@ -25,5 +25,8 @@ public interface FuelTarget {
     /** Human readable description, used by the /fuelblast diagnostics command. */
     String describe();
 
+    /** Remove the physical container after its fuel charge has detonated. */
+    default void removeAfterDetonation() { }
+
     boolean isValid();
 }

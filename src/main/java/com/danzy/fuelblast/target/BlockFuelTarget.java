@@ -30,6 +30,13 @@ public record BlockFuelTarget(Level level, BlockPos pos) implements FuelTarget {
     }
 
     @Override
+    public void removeAfterDetonation() {
+        if (level.isLoaded(pos)) {
+            level.destroyBlock(pos, true, null, 0);
+        }
+    }
+
+    @Override
     public boolean isValid() {
         return handler() != null;
     }

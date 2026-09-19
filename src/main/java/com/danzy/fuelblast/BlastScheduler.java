@@ -73,6 +73,7 @@ public final class BlastScheduler {
     public static void onServerStopping(ServerStoppingEvent event) {
         PENDING.clear();
         PRIMED_KEYS.clear();
+        FuelExplosion.clearConsumed();
     }
 
     private BlastScheduler() {}
