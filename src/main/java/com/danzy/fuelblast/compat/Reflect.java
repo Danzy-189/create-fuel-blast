@@ -48,6 +48,18 @@ public final class Reflect {
         return null;
     }
 
+    /** Public method lookup with exact parameter types, including default interface methods. */
+    public static Method publicMethod(Class<?> owner, String name, Class<?>... args) {
+        if (owner == null) return null;
+        try {
+            Method method = owner.getMethod(name, args);
+            try { method.setAccessible(true); } catch (Throwable ignored) {}
+            return method;
+        } catch (NoSuchMethodException ignored) {
+            return method(owner, name, args);
+        }
+    }
+
     /** Public method lookup including inherited/default interface methods. */
     public static Method publicMethodByName(Class<?> owner, String name, int arity) {
         if (owner == null) return null;

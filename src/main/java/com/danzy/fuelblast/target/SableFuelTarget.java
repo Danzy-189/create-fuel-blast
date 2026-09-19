@@ -15,19 +15,23 @@ public final class SableFuelTarget implements FuelTarget {
     private final Object embeddedLevel;
     private final Level parentLevel;
     private final BlockPos localPos;
+    private final BlockEntity discoveredBlockEntity;
 
-    public SableFuelTarget(Object subLevel, Object embeddedLevel, Level parentLevel, BlockPos localPos) {
+    public SableFuelTarget(Object subLevel, Object embeddedLevel, Level parentLevel, BlockPos localPos, BlockEntity discoveredBlockEntity) {
         this.subLevel = subLevel;
         this.embeddedLevel = embeddedLevel;
         this.parentLevel = parentLevel;
         this.localPos = localPos.immutable();
+        this.discoveredBlockEntity = discoveredBlockEntity;
     }
 
     @Override
     public Vec3 position() {
         Object pose = Reflect.invoke(Reflect.methodByName(subLevel.getClass(), "logicalPose", 0), subLevel);
         if (pose != null) {
-            Object transformed = Reflect.invoke(Reflect.publicMethodByName(pose.getClass(), "transformPosition", 1),
+            // Pose3dc has several transformPosition overloads. Select the Vec3 overload
+            // explicitly; choosing a Vector3d overload by arity silently returns null.
+            Object transformed = Reflect.invoke(Reflect.publicMethod(pose.getClass(), "transformPosition", Vec3.class),
                     pose, Vec3.atCenterOf(localPos));
             if (transformed instanceof Vec3 v) return v;
         }
@@ -43,7 +47,8 @@ public final class SableFuelTarget implements FuelTarget {
     public IFluidHandler handler() {
         Object be = Reflect.invoke(Reflect.methodByName(embeddedLevel.getClass(), "getBlockEntity", 1),
                 embeddedLevel, localPos);
-        if (!(be instanceof BlockEntity blockEntity) || blockEntity.isRemoved()) return null;
+        BlockEntity blockEntity = be instanceof BlockEntity found ? found : discoveredBlockEntity;
+        if (blockEntity == null || blockEntity.isRemoved()) return null;
         return Capabilities.FluidHandler.BLOCK.getCapability(parentLevel, localPos,
                 blockEntity.getBlockState(), blockEntity, null);
     }

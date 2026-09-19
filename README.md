@@ -54,8 +54,10 @@ Aeronautics и VS, а обращается к ним через кэширующ
 
 ## Физические и оружейные взрывы
 
-* Sable SubLevel физики сканируются по глобальному bounding box и текущему `logicalPose`; баки
-  внутри движущейся конструкции больше не теряются в обычном мире.
+* Sable SubLevel физики сканируются по загруженным embedded chunks; координата каждого бака
+  переводится через точный `Pose3dc.transformPosition(Vec3)` overload. Дополнительно сохраняется
+  найденный BlockEntity как fallback для NeoForge capability lookup. Баки внутри движущейся конструкции
+  больше не теряются в обычном мире.
 * Ванильные и модовые вызовы `Level.explode` обрабатываются через `ExplosionEvent.Detonate`.
 * Для ракет, бомб, гранат, мин, снарядов и боеголовок без `Level.explode` есть fallback через
   `ProjectileImpactEvent`.
