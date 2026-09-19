@@ -2,7 +2,6 @@ package com.danzy.fuelblast;
 
 import com.danzy.fuelblast.network.BlastEffectPacket;
 import com.danzy.fuelblast.target.FuelTarget;
-import com.danzy.fuelblast.target.SableFuelTarget;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -12,13 +11,27 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 /** Turns the fuel stored in a target into a properly sized explosion. */
 public final class FuelExplosion {
 
     private static final ThreadLocal<Integer> CHAIN_DEPTH = ThreadLocal.withInitial(() -> 0);
+    /** Keys already consumed by a detonation; prevents the synchronous explosion event
+     * from scheduling the same multiblock a second time before its blocks are removed. */
+    private static final Set<String> CONSUMED = ConcurrentHashMap.newKeySet();
 
     public static int currentChainDepth() {
         return CHAIN_DEPTH.get();
+    }
+
+    public static boolean isConsumed(String key) {
+        return CONSUMED.contains(key);
+    }
+
+    public static void clearConsumed() {
+        CONSUMED.clear();
     }
 
     public static void detonate(Level originLevel, FuelTarget target, int depth) {
@@ -27,6 +40,7 @@ public final class FuelExplosion {
 
         int fuel = FuelScan.fuelAmount(handler);
         if (fuel < FuelBlastConfig.minFuelMb.get()) return;
+        if (!CONSUMED.add(target.key())) return;
 
         ResourceLocation fluidId = dominantFluid(handler);
         drainFuel(handler);
@@ -34,6 +48,13 @@ public final class FuelExplosion {
         float power = (float) powerFor(fuel);
         Vec3 center = target.position();
         Level blastLevel = target.level() != null ? target.level() : originLevel;
+
+        // Remove the complete physical tank group before creating the nested explosion.
+        // ExplosionEvent.Detonate is synchronous; delaying removal until after explode()
+        // lets the event rediscover every remaining segment and queue duplicate blasts.
+        if (FuelBlastConfig.breakBlocks.get()) {
+            target.removeAfterDetonation();
+        }
 
         CHAIN_DEPTH.set(depth);
         try {
@@ -48,10 +69,6 @@ public final class FuelExplosion {
                             : Level.ExplosionInteraction.NONE);
         } finally {
             CHAIN_DEPTH.set(0);
-        }
-
-        if (target instanceof SableFuelTarget sableTarget && FuelBlastConfig.breakBlocks.get()) {
-            sableTarget.destroyBlock();
         }
 
         FireScatter.scatter(blastLevel, center, power, fuel);
