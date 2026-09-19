@@ -3,6 +3,7 @@ package com.danzy.fuelblast;
 import com.danzy.fuelblast.compat.AeronauticsCompat;
 import com.danzy.fuelblast.compat.ContraptionCompat;
 import com.danzy.fuelblast.compat.ValkyrienCompat;
+import com.danzy.fuelblast.compat.SableCompat;
 import com.danzy.fuelblast.target.FuelTarget;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import net.minecraft.commands.CommandSourceStack;
@@ -54,7 +55,8 @@ public final class FuelBlastCommands {
                 "Fuel Blast: " + targets.size() + " fuelled container(s) within " + (int) radius + " blocks"
                         + " | contraptions nearby: " + contraptions.size()
                         + " | Create: " + (ContraptionCompat.available() ? "yes" : "no")
-                        + " | Valkyrien Skies: " + (ValkyrienCompat.available() ? "yes" : "no")), false);
+                        + " | Valkyrien Skies: " + (ValkyrienCompat.available() ? "yes" : "no")
+                        + " | Sable: " + (SableCompat.available() ? "yes" : "no")), false);
 
         for (Entity entity : contraptions) {
             Level interior = AeronauticsCompat.interiorOf(entity);

@@ -23,9 +23,15 @@ public final class SableCompat {
     }
 
     public static void collect(Level level, Vec3 center, double radius, Consumer<FuelTarget> out) {
-        if (!available()) return;
+        if (!available()) {
+            if (FuelBlastConfig.debugLogging.get()) FuelBlast.LOGGER.info("[fuelblast] Sable API not present");
+            return;
+        }
         Object container = Reflect.invoke(Reflect.method(Reflect.clazz(CONTAINER), "getContainer", Level.class), null, level);
-        if (container == null) return;
+        if (container == null) {
+            if (FuelBlastConfig.debugLogging.get()) FuelBlast.LOGGER.warn("[fuelblast] Sable container unavailable for {}", level.dimension().location());
+            return;
+        }
 
         Object all = Reflect.invoke(Reflect.methodByName(container.getClass(), "getAllSubLevels", 0), container);
         if (!(all instanceof Iterable<?> subLevels)) return;
@@ -33,8 +39,10 @@ public final class SableCompat {
 
         for (Object subLevel : subLevels) {
             if (subLevel == null || removed(subLevel)) continue;
-            AABB bounds = boundsOf(subLevel);
-            if (bounds != null && distanceTo(bounds, center) > radius) continue;
+            // Do not reject a sub-level using its reflected bounds. Sable versions have
+            // changed whether boundingBox() is returned in plot or world coordinates;
+            // the per-tank pose check below is authoritative and still bounded by the
+            // number of loaded physical sub-levels.
 
             Object plot = Reflect.invoke(Reflect.methodByName(subLevel.getClass(), "getPlot", 0), subLevel);
             Object embedded = plot == null ? null
@@ -52,7 +60,7 @@ public final class SableCompat {
                     BlockPos localPos = be.getBlockPos();
                     if (Capabilities.FluidHandler.BLOCK.getCapability(level, localPos,
                             be.getBlockState(), be, null) == null) continue;
-                    SableFuelTarget target = new SableFuelTarget(subLevel, embedded, level, localPos);
+                    SableFuelTarget target = new SableFuelTarget(subLevel, embedded, level, localPos, be);
                     if (target.position().distanceToSqr(center) > radiusSq) continue;
                     out.accept(target);
                     matched++;
