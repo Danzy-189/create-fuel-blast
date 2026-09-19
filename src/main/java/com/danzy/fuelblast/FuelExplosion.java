@@ -2,19 +2,17 @@ package com.danzy.fuelblast;
 
 import com.danzy.fuelblast.network.BlastEffectPacket;
 import com.danzy.fuelblast.network.FuelBlastNetwork;
-import net.minecraft.core.BlockPos;
+import com.danzy.fuelblast.target.FuelTarget;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 
-/** Turns the fuel stored in a tank into a properly sized explosion. */
+/** Turns the fuel stored in a target into a properly sized explosion. */
 public final class FuelExplosion {
 
     private static final ThreadLocal<Integer> CHAIN_DEPTH = ThreadLocal.withInitial(() -> 0);
@@ -23,28 +21,26 @@ public final class FuelExplosion {
         return CHAIN_DEPTH.get();
     }
 
-    public static void detonate(ServerLevel level, BlockPos pos, int depth) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be == null || be.isRemoved()) return;
-
-        IFluidHandler handler = be.getCapability(ForgeCapabilities.FLUID_HANDLER).orElse(null);
+    public static void detonate(ServerLevel level, FuelTarget target, int depth) {
+        IFluidHandler handler = target.handler();
         if (handler == null) return;
 
         int fuel = ExplosionHandler.fuelAmount(handler);
         if (fuel < FuelBlastConfig.minFuelMb.get()) return;
 
         ResourceLocation fluidId = dominantFluid(handler);
-
-        // The fuel is consumed by the blast.
         drainFuel(handler);
 
         float power = (float) powerFor(fuel);
-        Vec3 center = Vec3.atCenterOf(pos);
+        Vec3 center = target.position();
+
+        // A blast inside an airship interior must be felt in that level, not the outside one.
+        ServerLevel blastLevel = target instanceof com.danzy.fuelblast.target.BlockFuelTarget b ? b.level() : level;
 
         CHAIN_DEPTH.set(depth);
         try {
-            level.explode(null,
-                    level.damageSources().explosion(null, null),
+            blastLevel.explode(null,
+                    blastLevel.damageSources().explosion(null, null),
                     null,
                     center.x, center.y, center.z,
                     power,
@@ -56,10 +52,18 @@ public final class FuelExplosion {
             CHAIN_DEPTH.set(0);
         }
 
+        BlastEffectPacket packet = new BlastEffectPacket(center, power, fuel, fluidId);
         FuelBlastNetwork.CHANNEL.send(
                 PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(
-                        center.x, center.y, center.z, 192.0D, level.dimension())),
-                new BlastEffectPacket(center, power, fuel, fluidId));
+                        center.x, center.y, center.z, 192.0D, blastLevel.dimension())), packet);
+
+        // Contraption tanks live in structure space; players see the airship, not the interior,
+        // so the visuals are also sent to everyone watching the parent level.
+        if (blastLevel != level) {
+            FuelBlastNetwork.CHANNEL.send(
+                    PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(
+                            center.x, center.y, center.z, 192.0D, level.dimension())), packet);
+        }
     }
 
     /** Sub-linear curve: more fuel always means a bigger boom, but never an infinite one. */

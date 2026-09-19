@@ -1,10 +1,13 @@
 package com.danzy.fuelblast;
 
+import com.danzy.fuelblast.target.FuelTarget;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.ArrayList;
@@ -15,28 +18,29 @@ import java.util.Set;
 
 /**
  * Tanks do not pop instantly: they hiss for a couple of ticks, then go off.
- * That fuse is what makes chain reactions look like a cascade instead of one frame of fire.
+ * That fuse is what turns a row of tanks into a cascade instead of one flat frame of fire.
  */
 public final class BlastScheduler {
 
-    private record Primed(ServerLevel level, BlockPos pos, int depth, int[] fuse) {}
+    private record Primed(ServerLevel level, FuelTarget target, int depth, int[] fuse) {}
 
     private static final List<Primed> PENDING = new ArrayList<>();
     private static final Set<String> PRIMED_KEYS = new HashSet<>();
 
-    public static boolean isPrimed(ServerLevel level, BlockPos pos) {
-        return PRIMED_KEYS.contains(key(level, pos));
+    public static boolean isPrimed(String key) {
+        return PRIMED_KEYS.contains(key);
     }
 
-    public static void prime(ServerLevel level, BlockPos pos, int depth) {
+    public static void prime(ServerLevel level, FuelTarget target, int depth) {
         int min = FuelBlastConfig.minFuseTicks.get();
         int max = Math.max(min, FuelBlastConfig.maxFuseTicks.get());
         int fuse = min + level.random.nextInt(max - min + 1);
 
-        PENDING.add(new Primed(level, pos.immutable(), depth, new int[]{fuse}));
-        PRIMED_KEYS.add(key(level, pos));
+        PENDING.add(new Primed(level, target, depth, new int[]{fuse}));
+        PRIMED_KEYS.add(target.key());
 
-        level.playSound(null, pos, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS,
+        Vec3 p = target.position();
+        level.playSound(null, BlockPos.containing(p), SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS,
                 1.6F, 0.6F + level.random.nextFloat() * 0.2F);
     }
 
@@ -44,29 +48,30 @@ public final class BlastScheduler {
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || PENDING.isEmpty()) return;
 
-        Iterator<Primed> it = PENDING.iterator();
         List<Primed> ready = new ArrayList<>();
+        Iterator<Primed> it = PENDING.iterator();
         while (it.hasNext()) {
             Primed p = it.next();
+            if (!p.target().isValid()) {
+                PRIMED_KEYS.remove(p.target().key());
+                it.remove();
+                continue;
+            }
             if (--p.fuse()[0] <= 0) {
                 ready.add(p);
                 it.remove();
             }
         }
         for (Primed p : ready) {
-            PRIMED_KEYS.remove(key(p.level(), p.pos()));
-            FuelExplosion.detonate(p.level(), p.pos(), p.depth());
+            PRIMED_KEYS.remove(p.target().key());
+            FuelExplosion.detonate(p.level(), p.target(), p.depth());
         }
     }
 
     @SubscribeEvent
-    public static void onServerStopping(net.minecraftforge.event.server.ServerStoppingEvent event) {
+    public static void onServerStopping(ServerStoppingEvent event) {
         PENDING.clear();
         PRIMED_KEYS.clear();
-    }
-
-    private static String key(ServerLevel level, BlockPos pos) {
-        return level.dimension().location() + "@" + pos.asLong();
     }
 
     private BlastScheduler() {}

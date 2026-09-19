@@ -30,6 +30,10 @@ public final class FuelBlastConfig {
     public static final ForgeConfigSpec.IntValue maxChainDepth;
     /** Guess flammability from the fluid name when it is not tagged/listed. */
     public static final ForgeConfigSpec.BooleanValue heuristicDetection;
+    /** Scan tanks mounted on assembled Create / Create Aeronautics contraptions. */
+    public static final ForgeConfigSpec.BooleanValue contraptionTanks;
+    /** Scan the interior levels of Create Aeronautics airships. */
+    public static final ForgeConfigSpec.BooleanValue aeronauticsInteriors;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> fuelValues;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> fuelTags;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> blacklist;
@@ -46,6 +50,10 @@ public final class FuelBlastConfig {
                 .defineInRange("minFuelMb", 250, 1, 1_000_000);
         heuristicDetection = b.comment("Treat unknown fluids whose id looks like fuel (diesel, gasoline, kerosene...) as flammable")
                 .define("heuristicDetection", true);
+        contraptionTanks = b.comment("Detonate tanks mounted on assembled contraptions (Create vehicles, Aeronautics aircraft)")
+                .define("contraptionTanks", true);
+        aeronauticsInteriors = b.comment("Project blasts into Create Aeronautics airship interiors")
+                .define("aeronauticsInteriors", true);
         b.pop();
 
         b.push("blast");
@@ -85,7 +93,10 @@ public final class FuelBlastConfig {
                         "createindustry:sulfuric_naphtha=1.2",
                         // Create Aeronautics / misc
                         "aeronautics:jet_fuel=1.4",
+                        "aeronautics:fuel=1.2",
+                        "aeronautics:kerosene=1.1",
                         "create_aeronautics:jet_fuel=1.4",
+                        "createaeronautics:jet_fuel=1.4",
                         "minecraft:lava=0.4"
                 ), o -> o instanceof String);
         fuelTags = b.comment("Fluid tags treated as fuel: 'namespace:path=energy'")
